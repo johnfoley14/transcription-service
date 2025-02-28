@@ -548,6 +548,7 @@ def asr_factory(args, logfile=sys.stderr):
     else:
         if backend == "faster-whisper":
             asr_cls = FasterWhisperASR
+            logger.info("Using Faster Whisper.")
         elif backend == "mlx-whisper":
             asr_cls = MLXWhisper
         else:
