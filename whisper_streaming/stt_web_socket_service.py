@@ -46,20 +46,25 @@ def format_output_transcript(o):
         if last_end is not None:
             beg = max(beg, last_end)
         last_end = end
-        return f"{beg:.0f} {end:.0f} {o[2]}"
+
+        return {
+                "start":round(beg, 0),
+                "end":round(end, 0),
+                "transcript":o[2]}
     return None
 
 # WebSocket handler
 async def transcribe_websocket(websocket):
     global last_end
-    print("Client connected.")
+    connection_start = now.timestamp() * 1000
+    logger.info("Client connected.")
     buffer = []
     online.init()
     running = True
 
     def audio_callback(indata, frames, time, status):
         if status:
-            print("Stream status:", status, file=sys.stderr)
+            logger.info("Stream status:", status, file=sys.stderr)
         buffer.append(indata.copy())
 
     stream = sd.InputStream(
@@ -83,27 +88,28 @@ async def transcribe_websocket(websocket):
                     o = online.process_iter()
                     result = format_output_transcript(o)
                     if result:
+                        result["connection start"] = connection_start
                         await websocket.send(result)
     except websockets.exceptions.ConnectionClosed:
-        print("Client disconnected.")
+        logger.info("Client disconnected.")
     except Exception as e:
         logger.exception(f"Error during transcription: {e}")
     finally:
         running = False
         stream.close()
-        print("Audio stream closed.")
+        logger.info("Audio stream closed.")
 
 # Start WebSocket server
 async def main():
     host = "localhost"
     port = 8765
-    print(f"WebSocket STT server listening on ws://{host}:{port}")
+    logger.info(f"WebSocket STT server listening on ws://{host}:{port}")
     async with websockets.serve(transcribe_websocket, host, port):
         await asyncio.Future()  # Run forever
 
 # Support CTRL+C to exit
 def handle_sigint(sig, frame):
-    print("Shutting down...")
+    logger.info("Shutting down...")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_sigint)
