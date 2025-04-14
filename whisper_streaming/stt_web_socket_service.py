@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
-import sys
-import argparse
-import os
-import logging
-import asyncio
-import websockets
-import numpy as np
-import sounddevice as sd
+import sys, argparse, os, logging, asyncio, websockets, numpy as np, sounddevice as sd, signal, json
 from whisper_online import *
-import signal
+from datetime import datetime
 
 # Setup
 logger = logging.getLogger(__name__)
@@ -20,7 +13,9 @@ args = parser.parse_args()
 set_logging(args, logger)
 
 # Whisper Setup
+
 SAMPLING_RATE = 16000
+logger.info(f"Args: {args}")
 asr, online = asr_factory(args)
 min_chunk = args.min_chunk_size
 
@@ -56,7 +51,7 @@ def format_output_transcript(o):
 # WebSocket handler
 async def transcribe_websocket(websocket):
     global last_end
-    connection_start = now.timestamp() * 1000
+    connection_start = datetime.now().timestamp() * 1000
     logger.info("Client connected.")
     buffer = []
     online.init()
@@ -89,7 +84,7 @@ async def transcribe_websocket(websocket):
                     result = format_output_transcript(o)
                     if result:
                         result["connection start"] = connection_start
-                        await websocket.send(result)
+                        await websocket.send(json.dumps(result))
     except websockets.exceptions.ConnectionClosed:
         logger.info("Client disconnected.")
     except Exception as e:
