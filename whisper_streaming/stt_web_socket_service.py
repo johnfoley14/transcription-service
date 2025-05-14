@@ -54,7 +54,7 @@ async def transcribe_websocket(websocket):
     connection_start = datetime.now().timestamp() * 1000
     logger.info("Client connected.")
     buffer = []
-    online.init()
+    online.init() # Initiate Whisper online VAC processor
     running = True
 
     def audio_callback(indata, frames, time, status):
